@@ -48,7 +48,7 @@
 
 (def nemeses
   "A set of valid nemeses you can pass at the CLI."
-  #{:partition})
+  #{:partition :chaos-mesh})
 
 (defn maelstrom-test
   "Construct a Jepsen test from parsed CLI options"
@@ -61,9 +61,13 @@
         workload-name (:workload opts)
         workload      ((workloads workload-name)
                        (assoc opts :nodes nodes, :net net))
-        nemesis-package (nemesis/package {:db       db
-                                          :interval (:nemesis-interval opts)
-                                          :faults   (:nemesis opts)})
+        nemesis-package (nemesis/package {:db         db
+                                          :interval   (:nemesis-interval opts)
+                                          :faults     (:nemesis opts)
+                                          :chaos-mesh {:endpoint  (:chaos-mesh-endpoint opts)
+                                                       :namespace (:chaos-mesh-namespace opts)
+                                                       :selector  (:chaos-mesh-selector opts)
+                                                       :token     (:chaos-mesh-token opts)}})
         generator (->> (if (pos? rate)
                          (gen/stagger (/ rate) (:generator workload))
                          (gen/sleep (:time-limit opts)))
@@ -215,6 +219,21 @@
     :default  10
     :parse-fn read-string
     :validate [pos? "Must be positive"]]
+
+   [nil "--chaos-mesh-endpoint URL" "Chaos Mesh dashboard URL, e.g. http://localhost:2333"
+    :default nil]
+
+   [nil "--chaos-mesh-namespace NS" "Kubernetes namespace of target pods"
+    :default "default"]
+
+   [nil "--chaos-mesh-selector LABELS" "Comma-separated key=value pod label selectors, e.g. app=smvr,tier=backend"
+    :default nil
+    :parse-fn (fn [s]
+                (into {} (map #(let [[k v] (str/split % #"=" 2)] [k v])
+                              (str/split s #","))))]
+
+   [nil "--chaos-mesh-token TOKEN" "Optional Bearer token for Chaos Mesh dashboard authentication"
+    :default nil]
 
    [nil "--rate RATE" "Approximate number of request/sec"
     :default  5

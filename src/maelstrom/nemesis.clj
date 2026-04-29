@@ -5,6 +5,7 @@
                     [nemesis :as n]
                     [util :refer [pprint-str]]]
             [jepsen.nemesis.combined :as nc]
+            [maelstrom.nemesis.chaos-mesh :as cm]
             [slingshot.slingshot :refer [try+ throw+]]))
 
 (defn package
@@ -12,5 +13,7 @@
   jepsen.nemesis.combined/nemesis-package."
   [opts]
   (nc/compose-packages
-    [(nc/partition-package opts)
-     (nc/db-package opts)]))
+    (filterv some?
+      [(nc/partition-package opts)
+       (nc/db-package opts)
+       (cm/package opts)])))
